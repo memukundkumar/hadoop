@@ -1,0 +1,130 @@
+1.	Open Eclipse on Windows.
+2.	Goto File - New - Java Project
+3.	Create a new Java Project named MRLab
+4.	Right click on MRLab - New - Package      ( i.e Create a package) Package name :   com.mukund
+5.	Right click on MRLab - Properties  Goto to Java Build Path
+6.	Select Libraries and Click on Add External JARs
+7.	goto your Hadoop folder stored in your PC, Select all jar files as below 
+
+{HADOOP_HOME}/share/hadoop/common
+{HADOOP_HOME}/share/hadoop/common/lib
+{HADOOP_HOME}/share/hadoop/mapreduce
+{HADOOP_HOME}/share/hadoop/yarn
+{HADOOP_HOME}/share/hadoop/hdfs
+
+8 jar files get added. Then Press OK
+
+9.	Right click on the package com.mukund in the project explorer window. 
+        New - Class
+10.	Create a java class named WordCountTesting
+11.	Right click on the project MRLab - Run as - Java application
+12.	Creating a jar file of the project
+                 Right click  MRLab  - Export
+13.	Click on JAR file and press  Next >
+14.	Click on Browse and select the location where you want to save the jar file.
+                 save the jar file with the name WordCount Next.. Finish-> jar file created
+15.	With the help of Winscp upload the WordCount.jar file 
+16.	Copy  the WordCount.jar  from the  Windows to linux folder
+
+17.	create a text file for example word and type some words 
+18.	Now copy the text file words from the local system to input folder of hadoop system.
+                 If the directory is not available on hdfs
+                 hadoop fs -mkdir /input
+                 hadoop fs -put /words /input
+
+19.	Unjar the WordCount.jar file in /directory/ by using following command:
+                 jar -xvf WordCount.jar 
+
+20.	Now check the contents in /home/user/lab/programs by command ls all,
+                 you will observe the unjar contents of WordCount.jar
+
+21.	Next run the  following command :
+        
+hadoop jar /home/cloudera/mukund/maprtest/WordCount.jar com.mukund.WordCountTesting /input/word /count
+
+
+
+22.    To check output use the command given below
+       hadoop fs -cat /count/part-r-00000
+
+=========================================================
+package com.mukund;
+import java.io.IOException;
+import java.util.StringTokenizer;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+public class WordCountTesting {
+
+	public static class MyMapper extends Mapper<LongWritable,Text,Text,IntWritable>{
+		private Text word = new Text();
+		
+		public void map(LongWritable key,Text value,Context context)throws IOException,InterruptedException {
+			System.out.println("Starting of Map function");
+			String line = value.toString();
+			System.out.println("Line:"+line);
+			StringTokenizer token = new StringTokenizer(line);
+			System.out.println("Tockens:"+token);
+			while(token.hasMoreTokens()){
+				word.set(token.nextToken());
+				context.write(word, new IntWritable(1));
+			}
+			System.out.println("End of Map function");
+		}
+	}
+	
+	public static class MyReducer extends Reducer<Text,IntWritable,Text,IntWritable>{
+		public void reduce(Text key,Iterable<IntWritable> values,Context context)
+ throws IOException,InterruptedException {
+			int sum = 0;
+			System.out.println("Starting reducer class");
+			for(IntWritable val : values){
+				sum += val.get();
+				System.out.println("Values:"+val.get());
+			}
+			System.out.println("Sum:"+sum);
+			context.write(key, new IntWritable(sum));
+			
+			System.out.println("End of reducer class");
+		}
+		
+	}
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) throws Exception{
+		// TODO Auto-generated method stub
+		System.out.println("Starting Main or Driver class");
+		Configuration conf = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+		
+		Job job = new Job(conf, "Word Counter");
+		job.setJarByClass(WordCountTesting.class);
+		job.setMapperClass(MyMapper.class);
+		job.setReducerClass(MyReducer.class);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(IntWritable.class);
+		
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+		
+		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+		
+		System.out.println(job.waitForCompletion(true) ? 0:1);
+		System.out.println("End of Main or Driver class");
+		
+	}
+
+}

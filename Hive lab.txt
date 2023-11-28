@@ -1,0 +1,104 @@
+HIVE
+
+create database retail;
+use retail;
+
+create table txnrecords(txnno int,txndate string,custno int,amount double,
+category string,product string,city string,state string,spendby string)
+row format delimited fields terminated by ',' stored as textfile;
+
+- Load data into table
+  
+  load data local inpath '/home/notroot/lab/data/txns' overwrite into
+  table txnrecords;
+
+-Describe metadata
+
+  describe txnrecords;
+
+-Count No. Of Records
+
+select count(*) from txnrecords;
+
+- Counting total spending by category of products
+
+select category,sum(amount)from txnrecords group by category;
+
+- Top 10 customers
+
+select custno,sum(amount) from txnrecords group by custno limit 10;
+
+-Create Partitioned table
+
+ create table txnrecsByCat (txnno INT, txndate STRING, custno INT,
+ amount DOUBLE, product STRING, city STRING, State STRING, 
+ spendby STRING) partitioned by ( category STRING) clustered by
+ (state) INTO 10 buckets row format delimited 
+ fields terminated by ',' stored as textfile; 
+
+-Configure Hive to allow partitions 
+ set hive.exec.dynamic.partition.mode=nonstrict;
+ set hive.exec.dynamic.partition=true;
+ set hive.enforce.bucketing=true;  
+
+-Load data into partition table 
+ 
+ from txnrecords txn INSERT OVERWRITE TABLE txnrecsByCat
+ PARTITION (category) 
+ SELECT txn.txnno,txndate, txn.custno, txn.amount,
+ txn.product, txn.city, txn.state, txn.spendby, txn.Category
+ DISTRIBUTE BY Category;
+
+
+
+- Verify files under HDFS to check how Hive has created multiple
+  directories for multiple partitions
+
+  Hadoop fs -Is / user/hive/warehouse/retail.db/ txnrecsByCat 
+
+At the hive> show partitions txnrecsByCat 
+
+hadoop fs -cat /user/hive/warehouse/retail.db/txnrecsbycat/category=Dancing/000000_0 
+select * from txnrecsByCat where category='Dancing' or Category='Jumping' 
+select * from txnrecsByCat where category='Puzzles' 
+
+
+-External Table 
+
+create a directory on hdfs 
+hadoop fs -mkdir /forhive 
+
+create two files cust1 and cust2 in data folder 
+
+cust1 
+c001,Mukund,Pune,411029 
+c002,Kumar,Delhi,110001 
+cust2 
+
+c003,Ramesh,Bhopal,711029 
+c004,Kumar,Bangalore,440001 
+
+hadoop fs -copyFromLocal /home/notroot/lab/data/cust1 /forhive 
+hadoop fs -copyFromLocal /home/notroot/lab/data/cust2 /forhive 
+
+hive> create external table customers(custid string,name string,address string,zip int)row format delimited fields terminated by ','location '/forhive'; 
+
+hive> select * from customers;
+
+
+
+
+
+
+
+
+
+
+
+
+S.NoSQL Query Hive QL1SELECT * FROM table_name;select * from customers;���2SELECT DISTINCT�column_names FROM table_name;select distinct profession from customers;3SELECT�column_name,column_nameselect fname, lname, age �FROM�table_namefrom customers �WHERE�column_name operator value;where fname == 'Ray';���4SELECT * FROM Customersselect fname, lname, profession �WHERE Country='Germany'from customers �AND (City='Berlin' OR City='M�nchen');where fname == 'Ray' and (profession ==
+ 'Coach' or profession == 'Judge');���5SELECT�column_name,column_nameselect fname, lname, age�FROM�table_namefrom customers �ORDER BY�column_name,column_name�ASC|DESC;order by age, fname desc;���6SELECT *select * �FROM Personsfrom customers �LIMIT 5;limit 10;7SELECT * FROM Customersselect * �WHERE City LIKE '%s';from customers ��where fname like '%lor%';8SELECT * FROM Customersselect * �WHERE City IN ('Paris','London');from customers ��where fname in ('Gloria', 'Dolores');9SELECT�column_name(s)select * �FROM�table_namefrom customers �WHERE�column_name�BETWEEN�value1�AND�value2;where age between 35 and 45;10SELECT�column_name�AS�alias_nameselect fname as firstname�FROM�table_name;from customers;11SELECT�column_name(s)select customers.custid, txnrecords.txnid, fname, lname, 
+city, state�FROM�table1from customers �JOIN�table2join txnrecords�ON�table1.column_name=table2.column_name;on customers.custid = txnrecords.custid;12SELECT Customers.CustomerName, Orders.OrderIDselect customers.custid, txnrecords.txnid, fname, lname, 
+city, state�FROM Customersfrom customers �LEFT JOIN Ordersleft outer join txnrecords�ON Customers.CustomerID=Orders.CustomerIDon (customers.custid = txnrecords.custid);�ORDER BY Customers.CustomerName;�13SELECT City FROM Customersselect customers.custid from customers�UNIONunion�SELECT City FROM Suppliersselect txnrecords.custid from txnrecords�ORDER BY City;order by custid desc;14SELECT AVG(column_name) FROM table_nameselect avg (age) from customers;15SELECT column_name, aggregate_function(column_name)select custid, count (txnid)�FROM table_namefrom txnrecords�WHERE column_name operator valuewhere amt between 50 and 75�GROUP BY column_name;group by custid;
+
+

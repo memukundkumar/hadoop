@@ -1,0 +1,13 @@
+hadoop fs -put <src><dest>
+hadoop fs -get <src><dest>
+hadoop fs -copyFromLocal <src><dest>
+hadoop fs -moveFromLocal <src><dest>
+hadoop fs -copyToLocal <src><dest>
+hadoop fs -moveToLocal <src><dest>
+hadoop fs -cat <fn>
+hadoop fs -rm <fn>
+hadoop fs -rmr <dir>
+hadoop fs -mv <src> <dest>
+hadoop fs -du <file name> //disk usage of the file
+hadoop fs -setrep <number of replication> <file name>
+

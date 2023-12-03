@@ -86,19 +86,49 @@ hive> create external table customers(custid string,name string,address string,z
 hive> select * from customers;
 
 
+--Additional queries to check
 
 
+-- SELECT * FROM table_name;
+select * from customers;
 
+2
+--SELECT DISTINCT column_names FROM table_name;
 
+select distinct profession from customers;
 
+3
+--SELECT column_name,column_name
+select fname, lname, age from customers 
 
+--Add where clause (WHERE column_name operator value;)
+where fname == 'Ray';
 
+4
+select fname, lname, profession from customers 
+WHERE Country='Germany'
 
+5
+select fname, lname, age  from customers 
+order by age, fname desc;
+6
+SELECT * FROM Customers
+WHERE City LIKE '%s';
+--where fname like '%lor%';
+7
+SELECT * FROM Customers
+WHERE City IN ('Paris','London');
 
+--where fname in ('Gloria', 'Dolores');
 
-S.NoSQL Query Hive QL1SELECT * FROM table_name;select * from customers;���2SELECT DISTINCT�column_names FROM table_name;select distinct profession from customers;3SELECT�column_name,column_nameselect fname, lname, age �FROM�table_namefrom customers �WHERE�column_name operator value;where fname == 'Ray';���4SELECT * FROM Customersselect fname, lname, profession �WHERE Country='Germany'from customers �AND (City='Berlin' OR City='M�nchen');where fname == 'Ray' and (profession ==
- 'Coach' or profession == 'Judge');���5SELECT�column_name,column_nameselect fname, lname, age�FROM�table_namefrom customers �ORDER BY�column_name,column_name�ASC|DESC;order by age, fname desc;���6SELECT *select * �FROM Personsfrom customers �LIMIT 5;limit 10;7SELECT * FROM Customersselect * �WHERE City LIKE '%s';from customers ��where fname like '%lor%';8SELECT * FROM Customersselect * �WHERE City IN ('Paris','London');from customers ��where fname in ('Gloria', 'Dolores');9SELECT�column_name(s)select * �FROM�table_namefrom customers �WHERE�column_name�BETWEEN�value1�AND�value2;where age between 35 and 45;10SELECT�column_name�AS�alias_nameselect fname as firstname�FROM�table_name;from customers;11SELECT�column_name(s)select customers.custid, txnrecords.txnid, fname, lname, 
-city, state�FROM�table1from customers �JOIN�table2join txnrecords�ON�table1.column_name=table2.column_name;on customers.custid = txnrecords.custid;12SELECT Customers.CustomerName, Orders.OrderIDselect customers.custid, txnrecords.txnid, fname, lname, 
-city, state�FROM Customersfrom customers �LEFT JOIN Ordersleft outer join txnrecords�ON Customers.CustomerID=Orders.CustomerIDon (customers.custid = txnrecords.custid);�ORDER BY Customers.CustomerName;�13SELECT City FROM Customersselect customers.custid from customers�UNIONunion�SELECT City FROM Suppliersselect txnrecords.custid from txnrecords�ORDER BY City;order by custid desc;14SELECT AVG(column_name) FROM table_nameselect avg (age) from customers;15SELECT column_name, aggregate_function(column_name)select custid, count (txnid)�FROM table_namefrom txnrecords�WHERE column_name operator valuewhere amt between 50 and 75�GROUP BY column_name;group by custid;
+8
+select * 
+from customers 
+where age between 35 and 45;
 
-
+9
+select customers.custid, txnrecords.txnid, fname, lname, 
+city, state
+from customers 
+join txnrecords
+on customers.custid = txnrecords.custid;

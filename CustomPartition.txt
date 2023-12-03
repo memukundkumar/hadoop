@@ -1,0 +1,226 @@
+Note- Check the path and other details and map according to your environment 
+
+1.	Open Eclipse on Windows.
+2.	Goto File - New - Java Project
+3.	Create a new Java Project named part
+4.	Right click on part- New - Package      ( i.e Create a package) Package name :   com.mukund
+5.	Right click on part- Properties  Goto to Java Build Path
+6.	Select Libraries and Click on Add External JARs
+7.	goto your Hadoop folder stored in your PC, Select all jar files under \hadoop1.0.3 
+        Jar files under \hadoop1.0.3 get included into Libraries
+8.	Similarly add all jar files from \hadoop1.0.3\lib
+9.	All the \hadoop1.0.3\bin jar files get added. Then Press OK
+
+10.	Right click on the package com.mukund in the project explorer window. 
+        New - Class
+11.	Create a java class named PartitionerDriver.java
+========================================
+package com.mukund;
+ 
+import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.conf.Configured;
+ import org.apache.hadoop.fs.Path;
+ //import org.apache.hadoop.io.IntWritable;
+ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.mapreduce.Job;
+ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+ import org.apache.hadoop.util.Tool;
+ import org.apache.hadoop.util.ToolRunner;
+ 
+public class PartitionerDriver extends Configured implements Tool{
+ 
+@Override
+ public int run(String[] args) throws Exception {
+ Configuration conf = new Configuration();
+ Job job = new Job(conf, "partitioner");
+ 
+job.setJarByClass(getClass());
+ 
+// configure output and input source
+ TextInputFormat.addInputPath(job, new Path(args[0]));
+ job.setInputFormatClass(TextInputFormat.class);
+ 
+job.setMapperClass(PartitionerMapper.class);
+ job.setPartitionerClass(AgePartitioner.class);
+ job.setReducerClass(PartitionerReducer.class);
+ 
+// the number of reducers is set to 3, this can be altered according to
+ // the program's requirements
+ job.setNumReduceTasks(3);
+ 
+// configure output
+ TextOutputFormat.setOutputPath(job, new Path(args[1]));
+ job.setOutputFormatClass(TextOutputFormat.class);
+ job.setOutputKeyClass(Text.class);
+ job.setOutputValueClass(Text.class);
+ 
+return job.waitForCompletion(true) ? 0 : 1;
+ }
+ public static void main(String[] args) throws Exception {
+ int exitCode = ToolRunner.run(new PartitionerDriver(), args);
+ System.exit(exitCode);
+ }
+ }
+========================================
+12.	Create another java class named PartitionerMapper.Java
+========================================
+package com.mukund;
+ 
+import java.io.IOException;
+ //import java.util.StringTokenizer;
+ 
+//import org.apache.hadoop.io.IntWritable;
+ import org.apache.hadoop.io.LongWritable;
+ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.mapreduce.Mapper;
+ 
+public class PartitionerMapper extends Mapper<LongWritable, Text, Text, Text> {
+ //private final static IntWritable countOne = new IntWritable(1);
+ //private final Text reusableText = new Text();
+ 
+@Override
+ protected void map(LongWritable key, Text value, Context context) throws IOException,
+ InterruptedException {
+ //sample record
+ //name<tab>age<tab>gender<tab>salary
+ //Raju<tab>23<tab>male<tab>5000
+ //Rani<tab>21<tab>female<tab>50000
+ String[] tokens = value.toString().split("\t");
+ String gender = tokens[2].toString();
+ String nameAgeSalary = tokens[0]+"\t"+tokens[1]+"\t"+tokens[3];
+ 
+//the mapper emits key, value pair where the key is the gender and the value is the other information which includes name, age and score
+ 
+context.write(new Text(gender), new Text(nameAgeSalary));
+ }
+ }
+
+========================================
+13.	Create another java class named AgePartitioner.Java
+========================================
+package com.mukund;
+ 
+import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.mapreduce.Partitioner;
+ 
+//AgePartitioner is a custom Partitioner to partition the data according to age.
+ //The age is a part of the value from the input file.
+ //The data is partitioned based on the range of the age.
+ //In this example, there are 3 partitions, the first partition contains the information where the age is less than 20
+ //The second partition contains data with age ranging between 20 and 50 and the third partition contains data where the age is >50.
+ 
+public class AgePartitioner extends Partitioner<Text, Text> {
+ @Override
+ public int getPartition(Text key, Text value, int numReduceTasks) {
+ 
+String [] nameAgeSalary = value.toString().split("\t");
+ 
+String age = nameAgeSalary[1];
+ 
+int ageInt = Integer.parseInt(age);
+ //this is done to avoid performing mod with 0
+ if(numReduceTasks == 0)
+ return 0;
+ //if the age is <20, assign partition 0
+ if(ageInt <=20){
+ return 0;
+ }
+ //else if the age is between 20 and 50, assign partition 1
+ if(ageInt >20 && ageInt <=50){
+ return 1 % numReduceTasks;
+ }
+ //otherwise assign partition 2
+ else
+ return 2 % numReduceTasks;
+ 
+}
+ 
+}
+========================================
+14.	Create another java class named PartitionerReducer.Java
+========================================
+package com.mukund;
+ 
+import java.io.IOException;
+ 
+//import org.apache.hadoop.io.IntWritable;
+ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.mapreduce.Reducer;
+ 
+public class PartitionerReducer extends Reducer<Text, Text, Text, Text> {
+ @Override
+ protected void reduce(Text key, Iterable<Text> values, Context context)
+ throws IOException, InterruptedException {
+ 
+int maxSalary = Integer.MIN_VALUE;
+ String name = " ";
+ String age = " ";
+ String gender = " ";
+ int salary = 0;
+ 
+//iterating through the values corresponding to a particular key
+ for(Text val: values){
+ String [] valTokens = val.toString().split("\\t");
+ salary = Integer.parseInt(valTokens[2]);
+ //if the new salary is greater than the current maximum salary, update the fields as they will be the output of the reducer after all the values are processed for a particular key
+ 
+if(salary > maxSalary){
+ name = valTokens[0];
+ age = valTokens[1];
+ gender = key.toString();
+ maxSalary = salary;
+ }
+ }
+ context.write(new Text(name), new Text("age- "+age+"\t"+gender+"\tscore-"+maxSalary));
+ }
+ }
+========================================
+
+
+16.	Right click on the project part - Run as - Java application
+17.	Creating a jar file of the project
+         Right click  part - Export
+18.	Click on JAR file and press  Next >
+19.	Click on Browse and select the location where you want to save the jar file.
+        save the jar file with the name part.jar Next.. Finish-> jar file created
+20.	On the Remote machine UBUNTU side i.e  on the right part of WinSCP  click on 
+        And get into Lab - Programs i.e /home/notroot/lab/programs
+21.	Copy  the part.jar  from the  Windows i.e  left side  to the remote machine Ubuntu on the right side
+        by Drag & Drop to the location  /home/notroot/lab/programs
+22.	Now goto /home/notroot/lab/data on Ubuntu and write a text file named staffdetails in it.
+        
+========================================
+
+Rajeev	23	female	5000
+Raman	34	male	7000
+Arjun	67	male	900000
+Keerthi	38	female	100000
+Kishore	25	male	23000
+Disha	78	female	7600
+Harsh	34	male	86000
+Arvind	52	male	6900
+Namita	7	female	9800
+Ajit	9	male	3700
+Jiten	7	male	2390
+Malti	6	female	9300
+Kirti	87	female	72000
+Monica	56	female	92000
+
+========================================
+23.	Now copy the text file words from the local system to input folder of hadoop system.
+
+             hadoop fs -copyFromLocal /home/notroot/lab/data/staffdetails /input
+
+24.	Unjar the WordCount.jar file in /home/notroot/lab/programs/ by using following command:
+        jar �xvf part.jar 
+
+25.	Now goto /home/notroot/lab/programs and run the job.
+        Use the following command :
+        hadoop jar /home/lab/programs/part.jar com.mukund.PartitionerDriver /input/staffdetails /output/result
+
+26.    To check output use the command given below
+       hadoop fs -cat /output/result/part-r-00000
+       hadoop fs -cat /output/result/part-r-00001
+       hadoop fs -cat /output/result/part-r-00002
+

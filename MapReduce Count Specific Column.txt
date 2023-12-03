@@ -1,0 +1,107 @@
+Note- Check the path and other details and map according to your environment 
+
+1.	Open Eclipse on Windows.
+2.	Goto File - New - Java Project
+3.	Create a new Java Project named FieldCount
+4.	Right click on FieldCount - New - Package      ( i.e Create a package) Package name :   com.mukund
+5.	Right click on FieldCount - Properties  Goto to Java Build Path
+6.	Select Libraries and Click on Add External JARs
+7.	goto your Hadoop folder stored in your PC, Select all jar files 
+
+8 jar files get added. Then Press OK
+
+9.	Right click on the package com.mukund in the project explorer window. 
+        New - Class
+10.	Create a java class named FieldsCount
+11.	Right click on the project FieldCount - Run as - Java application
+12.	Creating a jar file of the project
+         Right click Project FieldCount  - Export
+13.	Click on JAR file and press  Next >
+14.	Click on Browse and select the location where you want to save the jar file.
+        save the jar file with the name FieldC Next.. Finish-> jar file created
+
+17.	Now goto /home/osboxes/lab/ write a text file named emp  in it.
+
+e001,Ram,Pune
+e002,Tanmay,Kolkata
+e003,Ram,Kashmir
+
+        
+18.	Now copy the text file words from the local system to input folder of hadoop system.
+
+             hadoop fs -put emp /input
+
+19.	Unjar the WordCount.jar file  by using following command:
+        jar -xvf FieldC.jar 
+
+21.	Now run the job.
+        Use the following command :
+        hadoop jar FieldC.jar com.mukund.FieldsCount /input/emp /output/namecount
+
+
+22.    To check output use the command given below
+       hadoop fs �cat /output/namecount/part-00000
+
+=========================================================
+package com.mukund;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.*; 
+import java.io.IOException;
+import java.util.Iterator;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.GenericOptionsParser;
+ 
+public class FieldCounts {
+ 
+    public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Text, IntWritable> {
+        private final static IntWritable one = new IntWritable(1);
+        private Text word = new Text();
+ 
+        public void map(LongWritable key, Text value, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
+            String line = value.toString();
+           // String[] fields = line.split("\t");
+            String[] fields = line.split(",");
+            String firstName = fields[1];
+            word.set(firstName);
+            output.collect(word, one);
+        }
+    }
+ 
+    public static class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable> {
+ 
+        public void reduce(Text key, Iterator<IntWritable> values, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
+            int sum = 0;
+            while (values.hasNext()) {
+                sum += values.next().get();
+            }
+            output.collect(key, new IntWritable(sum));
+        }
+    }
+ 
+    public static void main(String[] args) throws Exception {
+    	Configuration conff = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conff, args).getRemainingArgs();
+    	
+    	JobConf conf = new JobConf(FieldCounts.class);
+        conf.setJobName("Field Counts");
+ 
+        conf.setOutputKeyClass(Text.class);
+        conf.setOutputValueClass(IntWritable.class);
+ 
+        conf.setMapperClass(Map.class);
+        conf.setCombinerClass(Reduce.class);
+        conf.setReducerClass(Reduce.class);
+ 
+        conf.setInputFormat(TextInputFormat.class);
+        conf.setOutputFormat(TextOutputFormat.class);
+               
+        FileInputFormat.addInputPath(conf, new Path(otherArgs[0]));
+	FileOutputFormat.setOutputPath(conf, new Path(otherArgs[1]));
+		
+ 
+        JobClient.runJob(conf);
+    }
+}
